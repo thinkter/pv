@@ -7,11 +7,9 @@
   </head>
   <body>
     <div class="app-shell">
-      <header class="app-chrome">
-        <div id="file-name" class="chrome-file-name">No presentation loaded</div>
-      </header>
+      <input id="file-input" class="hidden-file-input" type="file" multiple accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
 
-      <input id="file-input" class="hidden-file-input" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+      <div id="tab-bar" class="tab-bar" aria-label="Open presentations"></div>
 
       <main id="viewer-shell" class="viewer-shell empty" tabindex="0">
         <div class="viewer-topbar">

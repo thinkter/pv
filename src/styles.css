@@ -40,27 +40,83 @@ button {
   background: #020202;
 }
 
-.app-chrome {
+.tab-bar {
   display: flex;
-  align-items: center;
-  justify-content: flex-start;
-  min-height: 44px;
-  padding: 8px 18px;
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 13px;
-  letter-spacing: 0.02em;
-  background: #111111;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  align-items: stretch;
+  gap: 8px;
+  min-height: 42px;
+  padding: 6px 10px;
+  overflow-x: auto;
+  background: #0a0a0a;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.chrome-file-name {
+.tab-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  font-size: 14px;
-  font-weight: 600;
+  max-width: 280px;
+  padding: 5px 8px 5px 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  background: #141414;
+}
+
+.tab-chip.active {
+  background: #1d1d1d;
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.tab-chip-button,
+.tab-close-button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.tab-chip-button {
+  min-width: 0;
+  flex: 1;
+  text-align: left;
   color: rgba(255, 255, 255, 0.72);
-  white-space: nowrap;
+  cursor: pointer;
+  padding: 0;
+}
+
+.tab-chip.active .tab-chip-button {
+  color: #ffffff;
+}
+
+.tab-chip-name {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-chip-name {
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.tab-close-button {
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.64);
+  cursor: pointer;
+  padding: 0;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.tab-close-button:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
 }
 
 .button {
@@ -333,10 +389,13 @@ button {
 
   .viewer-topbar,
   .statusbar,
-  .toolbar,
-  .app-chrome {
+  .toolbar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .tab-bar {
+    padding-inline: 10px;
   }
 
   .toolbar-side {

@@ -6,6 +6,7 @@ window.JSZip = JSZip;
 window.Chart = Chart;
 
 let PPTXViewerConstructor = null;
+let nextTabId = 0;
 
 const elements = {
   openButton: document.getElementById('open-button'),
@@ -16,7 +17,6 @@ const elements = {
   nextButton: document.getElementById('next-button'),
   zoomInButton: document.getElementById('zoom-in-button'),
   zoomOutButton: document.getElementById('zoom-out-button'),
-  fileName: document.getElementById('file-name'),
   slideStatus: document.getElementById('slide-status'),
   slideStatusCompact: document.getElementById('slide-status-compact'),
   slideProgress: document.getElementById('slide-progress'),
@@ -27,18 +27,18 @@ const elements = {
   errorState: document.getElementById('error-state'),
   canvasStage: document.getElementById('canvas-stage'),
   canvas: document.getElementById('slide-canvas'),
+  tabBar: document.getElementById('tab-bar'),
 };
 
 const state = {
-  viewer: null,
-  filePath: null,
-  fileName: null,
-  slideCount: 0,
-  currentSlide: 0,
-  zoom: 1,
-  baseSlideWidth: 0,
-  baseSlideHeight: 0,
+  tabs: [],
+  activeTabId: null,
+  loadingCount: 0,
 };
+
+function getActiveTab() {
+  return state.tabs.find((tab) => tab.id === state.activeTabId) ?? null;
+}
 
 function showLoading(message = 'Loading presentation...') {
   elements.loadingState.textContent = message;
@@ -60,53 +60,58 @@ function clearError() {
   elements.errorState.textContent = '';
 }
 
-function updateUi() {
-  const hasDeck = Boolean(state.viewer);
+function renderTabs() {
+  elements.tabBar.replaceChildren();
 
+  for (const tab of state.tabs) {
+    const chip = document.createElement('div');
+    chip.className = `tab-chip${tab.id === state.activeTabId ? ' active' : ''}`;
+    chip.dataset.tabId = String(tab.id);
+
+    const switchButton = document.createElement('button');
+    switchButton.type = 'button';
+    switchButton.className = 'tab-chip-button';
+    switchButton.dataset.tabAction = 'activate';
+    switchButton.dataset.tabId = String(tab.id);
+
+    const tabName = document.createElement('div');
+    tabName.className = 'tab-chip-name';
+    tabName.textContent = tab.fileName;
+
+    switchButton.append(tabName);
+
+    const closeButton = document.createElement('button');
+    closeButton.type = 'button';
+    closeButton.className = 'tab-close-button';
+    closeButton.dataset.tabAction = 'close';
+    closeButton.dataset.tabId = String(tab.id);
+    closeButton.setAttribute('aria-label', `Close ${tab.fileName}`);
+    closeButton.textContent = 'x';
+
+    chip.append(switchButton, closeButton);
+    elements.tabBar.append(chip);
+  }
+}
+
+function updateUi() {
+  const activeTab = getActiveTab();
+  const hasDeck = Boolean(activeTab?.viewer);
+
+  renderTabs();
   elements.viewerShell.classList.toggle('empty', !hasDeck);
   elements.emptyState.classList.toggle('hidden', hasDeck);
   elements.canvasStage.classList.toggle('hidden', !hasDeck);
-  elements.prevButton.disabled = !hasDeck || state.currentSlide <= 0;
-  elements.nextButton.disabled = !hasDeck || state.currentSlide >= state.slideCount - 1;
+  elements.prevButton.disabled = !hasDeck || activeTab.currentSlide <= 0;
+  elements.nextButton.disabled = !hasDeck || activeTab.currentSlide >= activeTab.slideCount - 1;
   elements.zoomInButton.disabled = !hasDeck;
   elements.zoomOutButton.disabled = !hasDeck;
   elements.fitButton.disabled = !hasDeck;
 
-  elements.fileName.textContent = state.fileName ?? 'No presentation loaded';
-  elements.slideStatus.textContent = `Slide ${hasDeck ? state.currentSlide + 1 : 0} / ${state.slideCount}`;
-  elements.slideStatusCompact.textContent = `${hasDeck ? state.currentSlide + 1 : 0} / ${state.slideCount}`;
-  elements.zoomStatus.textContent = `Zoom ${Math.round(state.zoom * 100)}%`;
-  const progress = hasDeck && state.slideCount > 0 ? ((state.currentSlide + 1) / state.slideCount) * 100 : 0;
+  elements.slideStatus.textContent = `Slide ${hasDeck ? activeTab.currentSlide + 1 : 0} / ${activeTab?.slideCount ?? 0}`;
+  elements.slideStatusCompact.textContent = `${hasDeck ? activeTab.currentSlide + 1 : 0} / ${activeTab?.slideCount ?? 0}`;
+  elements.zoomStatus.textContent = `Zoom ${Math.round((activeTab?.zoom ?? 1) * 100)}%`;
+  const progress = hasDeck && activeTab.slideCount > 0 ? ((activeTab.currentSlide + 1) / activeTab.slideCount) * 100 : 0;
   elements.slideProgress.style.width = `${progress}%`;
-}
-
-function syncStateFromViewer() {
-  if (!state.viewer) {
-    state.slideCount = 0;
-    state.currentSlide = 0;
-    return;
-  }
-
-  state.slideCount = state.viewer.getSlideCount();
-}
-
-async function renderCurrentSlide() {
-  if (!state.viewer || !state.baseSlideWidth || !state.baseSlideHeight) {
-    return;
-  }
-
-  const availableWidth = Math.max(elements.canvasStage.clientWidth - 40, 320);
-  const availableHeight = Math.max(elements.canvasStage.clientHeight - 40, 180);
-  const fitScale = Math.min(
-    availableWidth / state.baseSlideWidth,
-    availableHeight / state.baseSlideHeight,
-  );
-  const displayWidth = Math.max(1, Math.round(state.baseSlideWidth * fitScale * state.zoom));
-  const displayHeight = Math.max(1, Math.round(state.baseSlideHeight * fitScale * state.zoom));
-
-  elements.canvas.style.width = `${displayWidth}px`;
-  elements.canvas.style.height = `${displayHeight}px`;
-  await state.viewer.renderSlide(state.currentSlide, elements.canvas);
 }
 
 async function getPPTXViewerConstructor() {
@@ -119,59 +124,92 @@ async function getPPTXViewerConstructor() {
   return PPTXViewerConstructor;
 }
 
-function attachViewerEvents(viewer) {
+async function renderActiveSlide() {
+  const activeTab = getActiveTab();
+  if (!activeTab?.viewer || !activeTab.baseSlideWidth || !activeTab.baseSlideHeight) {
+    return;
+  }
+
+  const availableWidth = Math.max(elements.canvasStage.clientWidth - 40, 320);
+  const availableHeight = Math.max(elements.canvasStage.clientHeight - 40, 180);
+  const fitScale = Math.min(
+    availableWidth / activeTab.baseSlideWidth,
+    availableHeight / activeTab.baseSlideHeight,
+  );
+  const displayWidth = Math.max(1, Math.round(activeTab.baseSlideWidth * fitScale * activeTab.zoom));
+  const displayHeight = Math.max(1, Math.round(activeTab.baseSlideHeight * fitScale * activeTab.zoom));
+
+  elements.canvas.style.width = `${displayWidth}px`;
+  elements.canvas.style.height = `${displayHeight}px`;
+  await activeTab.viewer.renderSlide(activeTab.currentSlide, elements.canvas);
+}
+
+function attachViewerEvents(viewer, tab) {
   viewer.on('loadComplete', ({ slideCount }) => {
-    state.slideCount = slideCount;
-    state.currentSlide = 0;
-    state.zoom = 1;
+    tab.slideCount = slideCount;
+    tab.currentSlide = 0;
+    tab.zoom = 1;
     updateUi();
   });
 }
 
-async function loadPresentationFile(file) {
-  if (!file) {
+function beginLoading(message) {
+  state.loadingCount += 1;
+  showLoading(message);
+}
+
+function endLoading() {
+  state.loadingCount = Math.max(0, state.loadingCount - 1);
+  if (state.loadingCount === 0) {
+    hideLoading();
+  }
+}
+
+async function createTabFromFile(file) {
+  const PPTXViewer = await getPPTXViewerConstructor();
+  const viewer = new PPTXViewer({ canvas: elements.canvas });
+  const tab = {
+    id: nextTabId += 1,
+    viewer,
+    fileName: file.name,
+    slideCount: 0,
+    currentSlide: 0,
+    zoom: 1,
+    baseSlideWidth: 0,
+    baseSlideHeight: 0,
+  };
+
+  attachViewerEvents(viewer, tab);
+  await viewer.loadFile(file);
+  await viewer.renderSlide(0, elements.canvas, { scale: 1 });
+  tab.slideCount = viewer.getSlideCount();
+  tab.baseSlideWidth = elements.canvas.width || 1;
+  tab.baseSlideHeight = elements.canvas.height || 1;
+
+  state.tabs.push(tab);
+  state.activeTabId = tab.id;
+  updateUi();
+  await renderActiveSlide();
+  elements.viewerShell.focus();
+}
+
+async function loadPresentationFiles(files) {
+  if (!files.length) {
     return;
   }
 
-  showLoading('Opening presentation...');
+  beginLoading(files.length > 1 ? 'Opening presentations...' : 'Opening presentation...');
   clearError();
 
   try {
-    if (state.viewer) {
-      state.viewer.destroy();
+    for (const file of files) {
+      await createTabFromFile(file);
     }
-
-    const PPTXViewer = await getPPTXViewerConstructor();
-    const viewer = new PPTXViewer({ canvas: elements.canvas });
-    attachViewerEvents(viewer);
-
-    await viewer.loadFile(file);
-    state.currentSlide = 0;
-    await viewer.renderSlide(0, elements.canvas, { scale: 1 });
-
-    state.viewer = viewer;
-    state.filePath = null;
-    state.fileName = file.name;
-    syncStateFromViewer();
-    state.baseSlideWidth = elements.canvas.width || 1;
-    state.baseSlideHeight = elements.canvas.height || 1;
-    state.zoom = 1;
-
-    updateUi();
-    await renderCurrentSlide();
-    hideLoading();
-    elements.viewerShell.focus();
   } catch (error) {
-    state.viewer = null;
-    state.filePath = null;
-    state.fileName = null;
-    state.slideCount = 0;
-    state.currentSlide = 0;
-    state.baseSlideWidth = 0;
-    state.baseSlideHeight = 0;
-    hideLoading();
-    updateUi();
     showError(error instanceof Error ? error.message : 'Failed to open presentation.');
+  } finally {
+    endLoading();
+    updateUi();
   }
 }
 
@@ -194,41 +232,83 @@ async function loadLaunchPresentation() {
     type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
   });
 
-  await loadPresentationFile(file);
+  await loadPresentationFiles([file]);
 }
 
-async function openPresentation() {
+function openPresentation() {
   elements.fileInput.click();
 }
 
-async function goToPreviousSlide() {
-  if (!state.viewer || state.currentSlide <= 0) {
+async function activateTab(tabId) {
+  if (tabId === state.activeTabId || !state.tabs.some((tab) => tab.id === tabId)) {
     return;
   }
 
-  state.currentSlide = Math.max(0, state.currentSlide - 1);
-  await renderCurrentSlide();
+  state.activeTabId = tabId;
+  clearError();
+  updateUi();
+  await renderActiveSlide();
+  elements.viewerShell.focus();
+}
+
+async function closeTab(tabId) {
+  const closingIndex = state.tabs.findIndex((tab) => tab.id === tabId);
+  if (closingIndex === -1) {
+    return;
+  }
+
+  const [closingTab] = state.tabs.splice(closingIndex, 1);
+  closingTab.viewer?.destroy();
+
+  if (state.activeTabId === tabId) {
+    const fallbackTab = state.tabs[Math.max(0, closingIndex - 1)] ?? state.tabs[0] ?? null;
+    state.activeTabId = fallbackTab?.id ?? null;
+  }
+
+  clearError();
+  updateUi();
+
+  if (state.activeTabId) {
+    await renderActiveSlide();
+    elements.viewerShell.focus();
+    return;
+  }
+
+  elements.canvas.width = 0;
+  elements.canvas.height = 0;
+}
+
+async function goToPreviousSlide() {
+  const activeTab = getActiveTab();
+  if (!activeTab?.viewer || activeTab.currentSlide <= 0) {
+    return;
+  }
+
+  activeTab.currentSlide = Math.max(0, activeTab.currentSlide - 1);
+  await renderActiveSlide();
   updateUi();
 }
 
 async function goToNextSlide() {
-  if (!state.viewer || state.currentSlide >= state.slideCount - 1) {
+  const activeTab = getActiveTab();
+  if (!activeTab?.viewer || activeTab.currentSlide >= activeTab.slideCount - 1) {
     return;
   }
 
-  state.currentSlide = Math.min(state.slideCount - 1, state.currentSlide + 1);
-  await renderCurrentSlide();
+  activeTab.currentSlide = Math.min(activeTab.slideCount - 1, activeTab.currentSlide + 1);
+  await renderActiveSlide();
   updateUi();
 }
 
 function applyZoom(nextZoom) {
-  if (!state.viewer) {
+  const activeTab = getActiveTab();
+  if (!activeTab?.viewer) {
     return;
   }
 
-  state.zoom = Math.min(2.5, Math.max(0.4, nextZoom));
+  activeTab.zoom = Math.min(2.5, Math.max(0.4, nextZoom));
   updateUi();
-  void renderCurrentSlide();
+  void renderActiveSlide();
 }
 
 function fitSlide() {
@@ -257,17 +337,44 @@ async function toggleFullscreen() {
 }
 
 elements.openButton.addEventListener('click', () => {
-  void openPresentation();
+  openPresentation();
 });
 
 elements.fileInput.addEventListener('change', (event) => {
   const input = event.target;
-  if (!(input instanceof HTMLInputElement) || !input.files?.[0]) {
+  if (!(input instanceof HTMLInputElement) || !input.files?.length) {
     return;
   }
 
-  void loadPresentationFile(input.files[0]);
+  void loadPresentationFiles(Array.from(input.files));
   input.value = '';
+});
+
+  elements.tabBar.addEventListener('click', (event) => {
+  const target = event.target;
+  if (!(target instanceof HTMLElement)) {
+    return;
+  }
+
+  const actionElement = target.closest('[data-tab-action]');
+  if (!(actionElement instanceof HTMLElement)) {
+    return;
+  }
+
+  const action = actionElement.dataset.tabAction;
+  const tabId = Number(actionElement.dataset.tabId);
+  if (!action || !Number.isFinite(tabId)) {
+    return;
+  }
+
+  if (action === 'activate') {
+    void activateTab(tabId);
+    return;
+  }
+
+  if (action === 'close') {
+    void closeTab(tabId);
+  }
 });
 
 elements.prevButton.addEventListener('click', () => {
@@ -278,16 +385,16 @@ elements.nextButton.addEventListener('click', () => {
   void goToNextSlide();
 });
 
-elements.zoomInButton.addEventListener('click', () => applyZoom(state.zoom + 0.1));
-elements.zoomOutButton.addEventListener('click', () => applyZoom(state.zoom - 0.1));
+elements.zoomInButton.addEventListener('click', () => applyZoom((getActiveTab()?.zoom ?? 1) + 0.1));
+elements.zoomOutButton.addEventListener('click', () => applyZoom((getActiveTab()?.zoom ?? 1) - 0.1));
 elements.fitButton.addEventListener('click', fitSlide);
 elements.fullscreenButton?.addEventListener('click', () => {
   void toggleFullscreen();
 });
 
 window.addEventListener('resize', () => {
-  if (state.viewer) {
-    void renderCurrentSlide();
+  if (getActiveTab()?.viewer) {
+    void renderActiveSlide();
   }
 });
 
@@ -298,13 +405,13 @@ window.addEventListener('keydown', (event) => {
 
   if (isZoomInShortcut(event)) {
     event.preventDefault();
-    applyZoom(state.zoom + 0.1);
+    applyZoom((getActiveTab()?.zoom ?? 1) + 0.1);
     return;
   }
 
   if (isZoomOutShortcut(event)) {
     event.preventDefault();
-    applyZoom(state.zoom - 0.1);
+    applyZoom((getActiveTab()?.zoom ?? 1) - 0.1);
     return;
   }
 
@@ -316,7 +423,7 @@ window.addEventListener('keydown', (event) => {
 
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'o') {
     event.preventDefault();
-    void openPresentation();
+    openPresentation();
     return;
   }
 
@@ -333,12 +440,12 @@ window.addEventListener('keydown', (event) => {
     case '+':
     case '=':
       event.preventDefault();
-      applyZoom(state.zoom + 0.1);
+      applyZoom((getActiveTab()?.zoom ?? 1) + 0.1);
       break;
     case '-':
     case '_':
       event.preventDefault();
-      applyZoom(state.zoom - 0.1);
+      applyZoom((getActiveTab()?.zoom ?? 1) - 0.1);
       break;
     case '0':
       event.preventDefault();

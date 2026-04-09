@@ -2,17 +2,12 @@ const fs = require('node:fs');
 const path = require('node:path');
 const pptxgen = require('pptxgenjs');
 
-async function main() {
-  const fixtureDir = path.join(__dirname, 'fixtures');
-  const outputPath = path.join(fixtureDir, 'sample-deck.pptx');
-
-  fs.mkdirSync(fixtureDir, { recursive: true });
-
+function createDeck({ title, subtitle, outputPath, colors, slide2Title, slide3Title }) {
   const pptx = new pptxgen();
   pptx.layout = 'LAYOUT_WIDE';
   pptx.author = 'OpenCode';
   pptx.subject = 'Regression Test Deck';
-  pptx.title = 'Sample Deck';
+  pptx.title = title;
   pptx.company = 'OpenCode';
   pptx.lang = 'en-US';
   pptx.theme = {
@@ -22,8 +17,8 @@ async function main() {
   };
 
   const slide1 = pptx.addSlide();
-  slide1.background = { color: '0F172A' };
-  slide1.addText('Quarterly Product Review', {
+  slide1.background = { color: colors.background1 };
+  slide1.addText(title, {
     x: 0.6,
     y: 0.6,
     w: 11,
@@ -32,10 +27,10 @@ async function main() {
     fontSize: 24,
     bold: true,
   });
-  slide1.addText('Regression fixture slide 1', {
+  slide1.addText(subtitle, {
     x: 0.6,
     y: 1.5,
-    w: 5,
+    w: 7,
     h: 0.5,
     color: 'CBD5E1',
     fontSize: 14,
@@ -46,10 +41,10 @@ async function main() {
     w: 3.8,
     h: 1.8,
     rectRadius: 0.12,
-    fill: { color: '2563EB' },
-    line: { color: '60A5FA', pt: 1 },
+    fill: { color: colors.shape1 },
+    line: { color: colors.line1, pt: 1 },
   });
-  slide1.addText('Launch checklist', {
+  slide1.addText('Regression coverage', {
     x: 1,
     y: 2.55,
     w: 3,
@@ -58,7 +53,7 @@ async function main() {
     fontSize: 18,
     bold: true,
   });
-  slide1.addText('UI polish complete\nPlayback stable\nRegression tests green', {
+  slide1.addText('Initial render\nIndependent tabs\nStable controls', {
     x: 1,
     y: 3.05,
     w: 3,
@@ -70,8 +65,8 @@ async function main() {
   });
 
   const slide2 = pptx.addSlide();
-  slide2.background = { color: '111827' };
-  slide2.addText('Regression fixture slide 2', {
+  slide2.background = { color: colors.background2 };
+  slide2.addText(slide2Title, {
     x: 0.6,
     y: 0.6,
     w: 11,
@@ -80,7 +75,7 @@ async function main() {
     fontSize: 24,
     bold: true,
   });
-  slide2.addText('Navigation and zoom validation', {
+  slide2.addText('Navigation regression fixture', {
     x: 0.6,
     y: 1.4,
     w: 5,
@@ -93,8 +88,8 @@ async function main() {
     y: 2.2,
     w: 5.5,
     h: 2.8,
-    fill: { color: '7C3AED' },
-    line: { color: 'C4B5FD', pt: 1.5 },
+    fill: { color: colors.shape2 },
+    line: { color: colors.line2, pt: 1.5 },
   });
   slide2.addText('Slide two content block', {
     x: 1.2,
@@ -107,7 +102,78 @@ async function main() {
     bold: true,
   });
 
-  await pptx.writeFile({ fileName: outputPath });
+  const slide3 = pptx.addSlide();
+  slide3.background = { color: colors.background3 };
+  slide3.addText(slide3Title, {
+    x: 0.6,
+    y: 0.7,
+    w: 9,
+    h: 0.6,
+    color: 'FFFFFF',
+    fontSize: 24,
+    bold: true,
+  });
+  slide3.addText('Used to prove active tab state is isolated.', {
+    x: 0.6,
+    y: 1.5,
+    w: 6,
+    h: 0.4,
+    color: 'E5E7EB',
+    fontSize: 14,
+  });
+  slide3.addShape(pptx.ShapeType.ellipse, {
+    x: 1,
+    y: 2.2,
+    w: 4.2,
+    h: 2.4,
+    fill: { color: colors.shape3 },
+    line: { color: colors.line3, pt: 1.5 },
+  });
+
+  return pptx.writeFile({ fileName: outputPath });
+}
+
+async function main() {
+  const fixtureDir = path.join(__dirname, 'fixtures');
+  fs.mkdirSync(fixtureDir, { recursive: true });
+
+  await createDeck({
+    title: 'Quarterly Product Review',
+    subtitle: 'Regression fixture slide 1',
+    outputPath: path.join(fixtureDir, 'sample-deck.pptx'),
+    slide2Title: 'Regression fixture slide 2',
+    slide3Title: 'Regression fixture slide 3',
+    colors: {
+      background1: '0F172A',
+      background2: '111827',
+      background3: '172554',
+      shape1: '2563EB',
+      shape2: '7C3AED',
+      shape3: '0EA5E9',
+      line1: '60A5FA',
+      line2: 'C4B5FD',
+      line3: '7DD3FC',
+    },
+  });
+
+  await createDeck({
+    title: 'Customer Onboarding Plan',
+    subtitle: 'Alternate tab fixture slide 1',
+    outputPath: path.join(fixtureDir, 'sample-deck-alt.pptx'),
+    slide2Title: 'Alternate fixture slide 2',
+    slide3Title: 'Alternate fixture slide 3',
+    colors: {
+      background1: '1F2937',
+      background2: '052E16',
+      background3: '3F1D2E',
+      shape1: '10B981',
+      shape2: '84CC16',
+      shape3: 'EC4899',
+      line1: '6EE7B7',
+      line2: 'BEF264',
+      line3: 'F9A8D4',
+    },
+  });
 }
 
 main().catch((error) => {
