@@ -1,0 +1,30 @@
+{
+  "name": "pptx-viewer-electron",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Minimal local PPTX viewer built with Electron",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "concurrently -k \"pnpm dev:renderer\" \"pnpm dev:electron\"",
+    "dev:renderer": "vite",
+    "dev:electron": "wait-on tcp:5173 && ELECTRON_RENDERER_URL=http://127.0.0.1:5173 electron .",
+    "build": "vite build",
+    "preview": "vite preview",
+    "start": "electron .",
+    "test:e2e": "pnpm build && node tests/generate-sample-pptx.cjs && playwright test"
+  },
+  "dependencies": {
+    "chart.js": "^4.5.1",
+    "jszip": "^3.10.1",
+    "pptxviewjs": "^1.1.9"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.59.1",
+    "concurrently": "^9.2.1",
+    "electron": "^41.2.0",
+    "playwright": "^1.59.1",
+    "pptxgenjs": "^4.0.1",
+    "vite": "^8.0.8",
+    "wait-on": "^9.0.4"
+  }
+}

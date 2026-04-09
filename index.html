@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>PPTX Viewer</title>
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="app-chrome">
+        <div id="file-name" class="chrome-file-name">No presentation loaded</div>
+      </header>
+
+      <input id="file-input" class="hidden-file-input" type="file" accept=".pptx,application/vnd.openxmlformats-officedocument.presentationml.presentation" />
+
+      <main id="viewer-shell" class="viewer-shell empty" tabindex="0">
+        <div class="viewer-topbar">
+          <div class="viewer-meta-block">
+            <div class="eyebrow">PPTX Viewer</div>
+            <div class="viewer-subtitle">Local rendering with keyboard-first controls</div>
+          </div>
+          <div class="actions">
+            <button id="open-button" class="button button-primary">Open PPTX</button>
+            <button id="fit-button" class="button">Fit View</button>
+          </div>
+        </div>
+
+        <div class="statusbar">
+          <div class="slide-kicker">Current Slide</div>
+          <div class="metrics">
+            <span id="slide-status">Slide 0 / 0</span>
+            <span id="zoom-status">Zoom 100%</span>
+          </div>
+        </div>
+
+        <div id="empty-state" class="empty-state">
+          <div class="empty-kicker">Ready to present</div>
+          <p>Open a `.pptx` file to start viewing slides.</p>
+          <p class="hint">Keyboard: Left/Right to navigate, Ctrl/Cmd +/- to zoom, Ctrl/Cmd+0 to fit.</p>
+        </div>
+
+        <div id="loading-state" class="overlay hidden">Loading presentation...</div>
+        <div id="error-state" class="overlay hidden error"></div>
+
+        <div id="canvas-stage" class="canvas-stage hidden">
+          <canvas id="slide-canvas"></canvas>
+        </div>
+
+        <div class="stage-footer">
+          <div class="progress-track">
+            <div id="slide-progress" class="progress-fill"></div>
+          </div>
+
+          <div class="toolbar">
+            <div class="toolbar-pill">
+              <button id="prev-button" class="button nav-button" disabled>
+                <span class="nav-arrow">&larr;</span>
+                <span>Previous</span>
+              </button>
+              <div class="toolbar-divider"></div>
+              <div class="toolbar-count">
+                <span id="slide-status-compact">1 / 1</span>
+              </div>
+              <div class="toolbar-divider"></div>
+              <button id="next-button" class="button nav-button" disabled>
+                <span>Next</span>
+                <span class="nav-arrow">&rarr;</span>
+              </button>
+            </div>
+
+            <div class="toolbar-side">
+              <button id="zoom-out-button" class="button icon-button" disabled>-</button>
+              <button id="zoom-in-button" class="button icon-button" disabled>+</button>
+            </div>
+          </div>
+        </div>
+      </main>
+
+    </div>
+
+    <script type="module" src="/src/app.js"></script>
+  </body>
+</html>

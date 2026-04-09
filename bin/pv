@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+APP_ROOT="/home/ashman/Documents/rubbish/pptx-viewer-electron"
+ELECTRON_BIN="$APP_ROOT/node_modules/.bin/electron"
+
+nohup "$ELECTRON_BIN" "$APP_ROOT" "$@" >/dev/null 2>&1 &
