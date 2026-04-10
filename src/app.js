@@ -429,10 +429,14 @@ window.addEventListener('keydown', (event) => {
 
   switch (event.key) {
     case 'ArrowLeft':
+    case 'k':
+    case 'K':
       event.preventDefault();
       void goToPreviousSlide();
       break;
     case 'ArrowRight':
+    case 'j':
+    case 'J':
     case ' ':
       event.preventDefault();
       void goToNextSlide();

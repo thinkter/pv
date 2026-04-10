@@ -103,6 +103,10 @@ test('supports slide navigation with buttons and keyboard', async () => {
 
   await window.keyboard.press('ArrowLeft');
   await expect(window.locator('#slide-status')).toHaveText('Slide 2 / 3');
+  await window.keyboard.press('k');
+  await expect(window.locator('#slide-status')).toHaveText('Slide 1 / 3');
+  await window.keyboard.press('j');
+  await expect(window.locator('#slide-status')).toHaveText('Slide 2 / 3');
   await expect.poll(getBrowserZoomFactor).toBe(1);
 });
 
