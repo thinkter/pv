@@ -200,6 +200,20 @@ test('opens multiple presentations as separate tabs and switches between them', 
   await expect(window.locator('#slide-status')).toHaveText('Slide 1 / 3');
 });
 
+test('cycles tabs with shift+j and shift+k', async () => {
+  await openDecks([sampleDeck, alternateDeck]);
+
+  await expect(tabChip('sample-deck-alt.pptx')).toHaveClass(/active/);
+  await window.keyboard.press('Shift+K');
+  await expect(tabChip('sample-deck.pptx')).toHaveClass(/active/);
+
+  await window.keyboard.press('Shift+J');
+  await expect(tabChip('sample-deck-alt.pptx')).toHaveClass(/active/);
+
+  await window.keyboard.press('Shift+J');
+  await expect(tabChip('sample-deck.pptx')).toHaveClass(/active/);
+});
+
 test('preserves slide position and zoom independently per tab', async () => {
   await openDecks([sampleDeck, alternateDeck]);
 

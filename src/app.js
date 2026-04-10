@@ -251,6 +251,22 @@ async function activateTab(tabId) {
   elements.viewerShell.focus();
 }
 
+async function cycleTab(step) {
+  if (state.tabs.length < 2) {
+    return;
+  }
+
+  const activeIndex = state.tabs.findIndex((tab) => tab.id === state.activeTabId);
+  const startIndex = activeIndex >= 0 ? activeIndex : 0;
+  const nextIndex = (startIndex + step + state.tabs.length) % state.tabs.length;
+  const nextTab = state.tabs[nextIndex];
+  if (!nextTab) {
+    return;
+  }
+
+  await activateTab(nextTab.id);
+}
+
 async function closeTab(tabId) {
   const closingIndex = state.tabs.findIndex((tab) => tab.id === tabId);
   if (closingIndex === -1) {
@@ -432,11 +448,22 @@ window.addEventListener('keydown', (event) => {
     case 'k':
     case 'K':
       event.preventDefault();
+      if (event.shiftKey) {
+        void cycleTab(1);
+        break;
+      }
       void goToPreviousSlide();
       break;
     case 'ArrowRight':
     case 'j':
     case 'J':
+      event.preventDefault();
+      if (event.shiftKey) {
+        void cycleTab(-1);
+        break;
+      }
+      void goToNextSlide();
+      break;
     case ' ':
       event.preventDefault();
       void goToNextSlide();
