@@ -171,6 +171,11 @@ button {
   padding: 22px 28px 18px;
 }
 
+.viewer-shell:focus,
+.viewer-shell:focus-visible {
+  outline: none;
+}
+
 .viewer-topbar,
 .statusbar,
 .toolbar {
